@@ -151,8 +151,8 @@ def main() -> None:
     criterion = nn.CrossEntropyLoss()
     summary: list = []
 
-    # ── CNN models ─────────────────────────────────────────────────────────────
-    for model_name in ("efficientnet", "resnet"):
+    # ── CNN model ──────────────────────────────────────────────────────────────
+    for model_name in (args.backbone,):
         print(f"\n{'='*55}\n{model_name.upper()}\n{'='*55}")
         result = _eval_cnn(model_name, device, criterion)
         model, loaders, acc, preds, labels, metrics = result
