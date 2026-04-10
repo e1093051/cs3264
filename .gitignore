@@ -1,0 +1,33 @@
+# Data — raw images, processed splits, extracted features
+data/
+
+# Model checkpoints and saved ensembles
+checkpoints/
+
+# Results — plots, confusion matrices, JSON summaries
+results/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Conda / pip
+*.egg-info/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Kaggle credentials
+.kaggle/
+
+# Jupyter
+.ipynb_checkpoints/

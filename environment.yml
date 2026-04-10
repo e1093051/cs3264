@@ -1,0 +1,34 @@
+name: cs3264
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy=1.26.*
+  - pandas
+  - matplotlib
+  - seaborn
+  - pillow
+  - tqdm
+  - scikit-learn
+  - joblib
+  # PyTorch — choose ONE of the two blocks below and delete the other
+  # ---------- GPU (CUDA 12.1) ----------
+  - pytorch=2.2.*
+  - torchvision=0.17.*
+  - pytorch-cuda=12.1
+  # ---------- CPU only -----------------
+  # - pytorch=2.2.*
+  # - torchvision=0.17.*
+  # - cpuonly
+  # -------------------------------------
+  - pip:
+      - timm==1.0.3               # EfficientNet-B0 + Xception pretrained weights
+      - albumentations==1.4.6     # augmentation pipeline
+      - grad-cam==1.5.0           # Grad-CAM visualisation
+      - xgboost==2.0.3            # XGBoost ensemble
+      - opencv-python-headless==4.9.0.80
+      - kaggle==1.6.12            # kaggle CLI for dataset download
