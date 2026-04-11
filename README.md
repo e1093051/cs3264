@@ -18,6 +18,7 @@ cs3264/
 ├── extract_features.py      # Extract penultimate-layer features for ensemble models
 ├── train_ensemble.py        # Train RF + XGBoost on extracted CNN features
 ├── evaluate.py              # Cross-model comparison, confusion matrices, Grad-CAM
+├── evaluate_robustness.py   # Robustness evaluation under realistic image degradations
 └── utils.py                 # Seeding, metrics, plotting, result persistence
 ```
 
@@ -167,6 +168,33 @@ Generates:
 - Grad-CAM heatmaps showing which image regions drive predictions
 
 Output: `results/comparison/`
+
+### Step 5: Evaluate robustness under image degradations
+
+```bash
+python evaluate_robustness.py --backbone efficientnet
+python evaluate_robustness.py --backbone resnet
+```
+
+Dating-app photos typically go through JPEG recompression, resizing, and screenshotting. This script applies realistic degradations to the test set and re-evaluates all trained models (CNN + ensembles) to measure how accuracy degrades.
+
+Degradation conditions tested:
+
+| Condition | Description |
+|---|---|
+| `clean` | No degradation (baseline) |
+| `jpeg_q50` | JPEG compression at quality 50 |
+| `jpeg_q20` | JPEG compression at quality 20 |
+| `resize_0.5x` | Downscale to 50% then upscale back |
+| `resize_0.25x` | Downscale to 25% then upscale back |
+| `combined` | JPEG q50 + resize 0.5x (typical dating app pipeline) |
+
+Generates:
+- Confusion matrices for each model under each degradation
+- Accuracy and macro-F1 summary tables
+- Grouped bar chart comparing accuracy across degradations
+
+Output: `results/robustness/`
 
 ## Configuration
 
