@@ -1,0 +1,6 @@
+{
+  "model": "xgboost+efficientnet",
+  "accuracy": 0.9948717948717949,
+  "macro_f1": 0.9948766785521818,
+  "auc_macro": 0.9998717948717948
+}

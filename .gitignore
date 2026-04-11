@@ -4,9 +4,6 @@ data/
 # Model checkpoints and saved ensembles
 checkpoints/
 
-# Results — plots, confusion matrices, JSON summaries
-results/
-
 # Python bytecode
 __pycache__/
 *.pyc
