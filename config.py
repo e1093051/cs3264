@@ -50,3 +50,8 @@ RF_MAX_DEPTH     = None      # grow full trees; rely on ensemble for regularisat
 XGB_N_ESTIMATORS = 300
 XGB_MAX_DEPTH    = 6
 XGB_LR           = 0.05
+
+# for transformers
+DEIT_SIZE = 224
+VIT_SIZE = 224
+TRANSFORMER_LEARNING_RATE = 5e-5
