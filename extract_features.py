@@ -16,6 +16,8 @@ Usage
 ─────
     python extract_features.py --backbone efficientnet
     python extract_features.py --backbone resnet
+    python extract_features.py --backbone deit
+    python extract_features.py --backbone vit
 """
 
 import argparse
@@ -30,12 +32,14 @@ import config
 from dataset import build_file_list, FaceDataset, get_transforms
 from models.efficientnet import EfficientNetClassifier
 from models.resnet import ResNetClassifier
+from models.deit import DeiTSmallClassifier
+from models.vit import ViTBaseClassifier
 from utils import set_seed
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Extract CNN features for ensemble training.")
-    p.add_argument("--backbone", choices=["efficientnet", "resnet"], default="efficientnet")
+    p.add_argument("--backbone", choices=["efficientnet", "resnet", "deit", "vit"], default="efficientnet")
     p.add_argument("--batch_size", type=int, default=64)
     return p.parse_args()
 
@@ -64,10 +68,14 @@ def main() -> None:
             f"Run  python train_cnn.py --model {args.backbone}  first."
         )
 
-    img_size = (
-        config.EFFICIENTNET_SIZE if args.backbone == "efficientnet"
-        else config.RESNET_SIZE
-    )
+    IMG_SIZE_MAP = {
+        "efficientnet": config.EFFICIENTNET_SIZE,
+        "resnet": config.RESNET_SIZE,
+        "deit": config.DEIT_SIZE,
+        "vit": config.VIT_SIZE,
+    }
+
+    img_size = IMG_SIZE_MAP[args.backbone]
 
     # Use eval transforms for ALL splits — no augmentation during feature extraction
     eval_transform = get_transforms("val", img_size)
@@ -85,7 +93,14 @@ def main() -> None:
     print(f"Loaded splits — train: {len(loaders['train'].dataset)}, "
           f"val: {len(loaders['val'].dataset)}, test: {len(loaders['test'].dataset)}")
 
-    ModelCls = EfficientNetClassifier if args.backbone == "efficientnet" else ResNetClassifier
+    MODEL_MAP = {
+        "efficientnet": EfficientNetClassifier,
+        "resnet": ResNetClassifier,
+        "deit": DeiTSmallClassifier,
+        "vit": ViTBaseClassifier,
+    }
+
+    ModelCls = MODEL_MAP[args.backbone]
     model    = ModelCls(num_classes=config.NUM_CLASSES, pretrained=False).to(device)
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
     print(f"Loaded checkpoint: {ckpt_path}")

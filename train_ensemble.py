@@ -14,6 +14,8 @@ Usage
 ─────
     python train_ensemble.py --backbone efficientnet
     python train_ensemble.py --backbone resnet
+    python train_ensemble.py --backbone deit
+    python train_ensemble.py --backbone vit
 """
 
 import argparse
@@ -28,7 +30,7 @@ from utils import compute_metrics, save_results, set_seed
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Train ensemble models on CNN features.")
-    p.add_argument("--backbone", choices=["efficientnet", "resnet"], default="efficientnet",
+    p.add_argument("--backbone", choices=["efficientnet", "resnet", "deit", "vit"], default="efficientnet",
                    help="Which CNN backbone's features to use.")
     return p.parse_args()
 
