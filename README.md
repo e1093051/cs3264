@@ -85,6 +85,12 @@ Three datasets are needed. Download them and place under `data/raw/` as shown be
   ```
 - The `original/` and `reference/` folder from this dataset is not used by the pipeline.
 
+#### Dataset D: AI-Face-Dataset-3000_Images
+
+- **Source:** Kaggle — `AI-Face-Dataset-3000_Images`
+- **Download:** Go to https://www.kaggle.com/datasets/shavaizbutt/ai-face-dataset-3000-images and download the dataset.
+- **Rename the file to extra_ai, and Place at:** `data/raw/ai_generated`
+
 #### Final raw data layout
 
 After downloading and extracting all three datasets:
@@ -93,6 +99,7 @@ After downloading and extracting all three datasets:
 data/raw/
 ├── ai_generated/
 │   └── real_vs_fake/real-vs-fake/{train,valid,test}/{real,fake}/
+    └── extra_ai
 │
 └── photoshopped/
     ├── train/<person_id>/

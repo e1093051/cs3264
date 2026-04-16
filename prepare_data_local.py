@@ -130,6 +130,17 @@ def _collect_rvf(label: str) -> list[Path]:
             paths.extend(p for p in d.iterdir() if _is_image(p))
     return paths
 
+def _collect_images(root: Path) -> list[Path]:
+    paths: list[Path] = []
+    if not root.exists():
+        print(f"  [WARNING] Not found: {root}")
+        return paths
+
+    for p in root.rglob("*"):
+        if _is_image(p):
+            paths.append(p)
+    return paths
+
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -204,10 +215,18 @@ def main() -> None:
     print("\nScanning real_vs_fake …")
     rvf_real = _collect_rvf("real")
     rvf_fake = _collect_rvf("fake")
+
+    # NEW: extra AI-only dataset
+    extra_ai_dir = RAW / "ai_generated" / "extra_ai"
+    extra_ai = _collect_images(extra_ai_dir)
+
+    # Merge all AI-generated images
+    all_ai = rvf_fake + extra_ai
+
     rng.shuffle(rvf_real)
-    rng.shuffle(rvf_fake)
+    rng.shuffle(all_ai)
     print(f"  real_vs_fake/real: {len(rvf_real)}")
-    print(f"  real_vs_fake/fake: {len(rvf_fake)}")
+    print(f"  real_vs_fake/fake: {len(all_ai)}")
 
     # Split rvf images proportionally to match person split ratios
     def _split_list(lst: list, n_tr: int, n_vl: int) -> dict[str, list]:
@@ -222,9 +241,9 @@ def main() -> None:
     rvf_n_val   = int(len(rvf_real) * config.VAL_RATIO)
     rvf_real_splits = _split_list(rvf_real, rvf_n_train, rvf_n_val)
 
-    rvf_n_train_f = int(len(rvf_fake) * config.TRAIN_RATIO)
-    rvf_n_val_f   = int(len(rvf_fake) * config.VAL_RATIO)
-    ai_splits = _split_list(rvf_fake, rvf_n_train_f, rvf_n_val_f)
+    rvf_n_train_f = int(len(all_ai) * config.TRAIN_RATIO)
+    rvf_n_val_f   = int(len(all_ai) * config.VAL_RATIO)
+    ai_splits = _split_list(all_ai, rvf_n_train_f, rvf_n_val_f)
 
     # ── 4. Compute per-split caps targeting 70/15/15 on image counts ──────────
     #  Each split's photoshopped pool is its own bottleneck candidate. For the
@@ -235,6 +254,7 @@ def main() -> None:
               "test":  config.TEST_RATIO}
 
     pool_total_bound = min(len(ps_by_split[s]) / ratios[s] for s in SPLITS)
+
 
     if args.max_per_class > 0:
         # Interpret as TRAIN cap; scale val/test from ratios.
