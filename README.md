@@ -121,6 +121,8 @@ Output: `data/processed/{train,val,test}/{real,photoshopped,ai_generated}/`
 ```bash
 python train_cnn.py --model efficientnet
 python train_cnn.py --model resnet
+python train_transformer.py --model deit
+python train_transformer.py --model vit
 ```
 
 Two-phase training strategy:
@@ -137,6 +139,8 @@ Outputs:
 ```bash
 python extract_features.py --backbone efficientnet
 python extract_features.py --backbone resnet
+python extract_features.py --backbone deit
+python extract_features.py --backbone vit
 ```
 
 Passes all splits through the frozen CNN backbone using eval transforms (no augmentation) and saves the penultimate-layer feature vectors as `.npy` files.
@@ -148,6 +152,8 @@ Output: `data/features/{efficientnet,resnet}/{train,val,test}_{features,labels}.
 ```bash
 python train_ensemble.py --backbone efficientnet
 python train_ensemble.py --backbone resnet
+python train_ensemble.py --backbone deit
+python train_ensemble.py --backbone vit
 ```
 
 Trains Random Forest and XGBoost on the extracted features. Train and val splits are merged (backbone is frozen, no leakage risk).

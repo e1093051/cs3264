@@ -39,6 +39,8 @@ import config
 from dataset import build_file_list
 from models.efficientnet import EfficientNetClassifier
 from models.resnet import ResNetClassifier
+from models.deit import DeiTSmallClassifier
+from models.vit import ViTBaseClassifier
 from models.ensemble import load_model
 from utils import compute_metrics, plot_confusion_matrix, set_seed
 
@@ -155,7 +157,7 @@ def extract_features_degraded(model, loader, device):
 
 def parse_args():
     p = argparse.ArgumentParser(description="Robustness evaluation under degradations.")
-    p.add_argument("--backbone", choices=["efficientnet", "resnet"], default="efficientnet")
+    p.add_argument("--backbone", choices=["efficientnet", "resnet", "deit", "vit"], default="efficientnet")
     return p.parse_args()
 
 
@@ -170,14 +172,28 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     backbone = args.backbone
-    img_size = config.EFFICIENTNET_SIZE if backbone == "efficientnet" else config.RESNET_SIZE
+    IMG_SIZE_MAP = {
+        "efficientnet": config.EFFICIENTNET_SIZE,
+        "resnet": config.RESNET_SIZE,
+        "deit": config.DEIT_SIZE,
+        "vit": config.VIT_SIZE,
+    }
+
+    img_size = IMG_SIZE_MAP[args.backbone]
 
     # Load CNN model
     ckpt = Path(config.CHECKPOINT_DIR) / f"{backbone}_best.pth"
     if not ckpt.exists():
         print(f"[ERROR] No checkpoint: {ckpt}")
         return
-    ModelCls = EfficientNetClassifier if backbone == "efficientnet" else ResNetClassifier
+    MODEL_MAP = {
+        "efficientnet": EfficientNetClassifier,
+        "resnet": ResNetClassifier,
+        "deit": DeiTSmallClassifier,
+        "vit": ViTBaseClassifier,
+    }
+
+    ModelCls = MODEL_MAP[args.backbone]
     cnn_model = ModelCls(num_classes=config.NUM_CLASSES, pretrained=False).to(device)
     cnn_model.load_state_dict(torch.load(ckpt, map_location=device))
     cnn_model.eval()
