@@ -212,23 +212,22 @@ def main() -> None:
               f"orig(real)={len(orig_by_split[split]):>4}")
 
     # ── 3. Supplement real + collect AI-generated from real_vs_fake ────────────
-    print("\nScanning real_vs_fake …")
+    print("\nScanning real_vs_fake and extra AI dataset …")
     rvf_real = _collect_rvf("real")
     rvf_fake = _collect_rvf("fake")
 
-    # NEW: extra AI-only dataset
     extra_ai_dir = RAW / "ai_generated" / "extra_ai"
     extra_ai = _collect_images(extra_ai_dir)
 
-    # Merge all AI-generated images
-    all_ai = rvf_fake + extra_ai
-
     rng.shuffle(rvf_real)
-    rng.shuffle(all_ai)
-    print(f"  real_vs_fake/real: {len(rvf_real)}")
-    print(f"  real_vs_fake/fake: {len(all_ai)}")
+    rng.shuffle(rvf_fake)
+    rng.shuffle(extra_ai)
 
-    # Split rvf images proportionally to match person split ratios
+    print(f"  real_vs_fake/real: {len(rvf_real)}")
+    print(f"  real_vs_fake/fake: {len(rvf_fake)}")
+    print(f"  extra_ai: {len(extra_ai)}")
+    print(f"  total ai_generated pool: {len(rvf_fake) + len(extra_ai)}")
+
     def _split_list(lst: list, n_tr: int, n_vl: int) -> dict[str, list]:
         return {
             "train": lst[:n_tr],
@@ -236,14 +235,20 @@ def main() -> None:
             "test":  lst[n_tr + n_vl :],
         }
 
-    # Proportional split sizes for rvf data
+    # Split real supplement pool
     rvf_n_train = int(len(rvf_real) * config.TRAIN_RATIO)
     rvf_n_val   = int(len(rvf_real) * config.VAL_RATIO)
     rvf_real_splits = _split_list(rvf_real, rvf_n_train, rvf_n_val)
 
-    rvf_n_train_f = int(len(all_ai) * config.TRAIN_RATIO)
-    rvf_n_val_f   = int(len(all_ai) * config.VAL_RATIO)
-    ai_splits = _split_list(all_ai, rvf_n_train_f, rvf_n_val_f)
+    # Split old AI pool
+    rvf_fake_n_train = int(len(rvf_fake) * config.TRAIN_RATIO)
+    rvf_fake_n_val   = int(len(rvf_fake) * config.VAL_RATIO)
+    rvf_fake_splits = _split_list(rvf_fake, rvf_fake_n_train, rvf_fake_n_val)
+
+    # Split new extra AI pool
+    extra_ai_n_train = int(len(extra_ai) * config.TRAIN_RATIO)
+    extra_ai_n_val   = int(len(extra_ai) * config.VAL_RATIO)
+    extra_ai_splits = _split_list(extra_ai, extra_ai_n_train, extra_ai_n_val)
 
     # ── 4. Compute per-split caps targeting 70/15/15 on image counts ──────────
     #  Each split's photoshopped pool is its own bottleneck candidate. For the
@@ -279,8 +284,11 @@ def main() -> None:
         rvf_supplement = rvf_real_splits[split][:supplement_needed]
         real_paths = orig_by_split[split] + rvf_supplement
 
-        # AI-generated: pulled from rvf_fake split pool
-        ai_paths = ai_splits[split]
+        # AI-generated: prioritise extra_ai first, then fill with rvf_fake
+        extra_paths = extra_ai_splits[split]
+        remaining_ai_needed = max(0, cap - len(extra_paths))
+        rvf_fake_fill = rvf_fake_splits[split][:remaining_ai_needed]
+        ai_paths = extra_paths + rvf_fake_fill
 
         real_paths = real_paths[:cap]
         ps_paths   = ps_by_split[split][:cap]
