@@ -108,9 +108,9 @@ python prepare_data_local.py
 
 This performs **person-aware splitting** to prevent identity leakage:
 - Persons are split 70/15/15 into train/val/test groups
-- Train persons: **all** photoshopped edits included (more training data)
-- Val/test persons: **one** random edit each (honest evaluation)
-- All three classes are balanced to the photoshopped class size (bottleneck)
+- Every person contributes **all** their edits to their split's photoshopped pool
+- Per-split caps are computed so final image counts land on 70/15/15
+- All three classes are balanced within each split (1:1:1)
 
 Output: `data/processed/{train,val,test}/{real,photoshopped,ai_generated}/`
 
