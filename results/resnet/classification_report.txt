@@ -1,9 +1,9 @@
               precision    recall  f1-score   support
 
-        real       0.98      0.97      0.97       260
-photoshopped       0.97      1.00      0.98       260
-ai_generated       1.00      0.98      0.99       260
+        real       0.99      0.99      0.99      1876
+photoshopped       1.00      1.00      1.00      1876
+ai_generated       0.99      0.99      0.99      1876
 
-    accuracy                           0.98       780
-   macro avg       0.98      0.98      0.98       780
-weighted avg       0.98      0.98      0.98       780
+    accuracy                           0.99      5628
+   macro avg       0.99      0.99      0.99      5628
+weighted avg       0.99      0.99      0.99      5628

@@ -1,6 +1,6 @@
 {
   "model": "random_forest+efficientnet",
-  "accuracy": 0.9961538461538462,
-  "macro_f1": 0.9961538319298517,
-  "auc_macro": 0.9999580867850099
+  "accuracy": 0.9918265813788202,
+  "macro_f1": 0.9918391143012407,
+  "auc_macro": 0.9998692239760686
 }

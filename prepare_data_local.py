@@ -25,13 +25,13 @@ features instead of learning manipulation artefacts.
 
 Strategy:
   1. Pool all person IDs from photoshopped/{train,test}/.
-  2. Split person IDs 70/15/15 into train/val/test groups.
-  3. Train persons → include ALL their edits (more data for training).
-     Val/test persons → include ONE random edit each (honest evaluation).
-  4. Real (_orig.jpg per person) follows the same person split, topped up
+  2. Split person IDs 70/15/15 into train/val/test groups (identity isolation).
+  3. Every person contributes ALL their edits to their split's pool.
+  4. Per-split caps are computed so the final image counts land on 70/15/15.
+  5. Real (_orig.jpg per person) follows the same person split, topped up
      with real_vs_fake/real/ images (randomly assigned to splits).
-  5. AI-generated images are randomly split (no person identity concern).
-  6. photoshopped/modified/ (Kaggle dataset, separate persons) added to train.
+  6. AI-generated images are randomly split (no person identity concern).
+  7. photoshopped/modified/ (Kaggle dataset, separate persons) added to train.
 
 Raw data layout
 ───────────────
@@ -139,7 +139,8 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--max_per_class", type=int, default=0,
-        help="Max images per class PER SPLIT. 0 = auto-balance to smallest class.",
+        help="Max images per class in the TRAIN split. "
+             "Val/test are scaled to preserve 70/15/15. 0 = auto (bottleneck-driven).",
     )
     p.add_argument("--seed", type=int, default=config.SEED)
     return p.parse_args()
@@ -178,7 +179,7 @@ def main() -> None:
           f"test={len(split_pids['test'])}")
 
     # ── 2. Build per-split file lists ─────────────────────────────────────────
-    #  photoshopped: train gets ALL edits, val/test get ONE random edit
+    #  photoshopped: every person contributes ALL their edits to their split
     #  real (_orig): one per person, same split as their edits
     ps_by_split:   dict[str, list[Path]] = {"train": [], "val": [], "test": []}
     orig_by_split: dict[str, list[Path]] = {"train": [], "val": [], "test": []}
@@ -186,17 +187,9 @@ def main() -> None:
     for split in SPLITS:
         for pid in split_pids[split]:
             data = all_persons[pid]
-            # Orig → real class
             if data["orig"] is not None:
                 orig_by_split[split].append(data["orig"])
-            # Edits → photoshopped class
-            edits = data["edits"]
-            if not edits:
-                continue
-            if split == "train":
-                ps_by_split[split].extend(edits)       # ALL edits
-            else:
-                ps_by_split[split].append(rng.choice(edits))  # ONE random
+            ps_by_split[split].extend(data["edits"])
 
     # Add photoshopped/modified/ to train (separate persons, no leakage risk)
     modified_dir = RAW / "photoshopped" / "modified"
@@ -233,25 +226,41 @@ def main() -> None:
     rvf_n_val_f   = int(len(rvf_fake) * config.VAL_RATIO)
     ai_splits = _split_list(rvf_fake, rvf_n_train_f, rvf_n_val_f)
 
-    # ── 4. Balance classes per split ──────────────────────────────────────────
+    # ── 4. Compute per-split caps targeting 70/15/15 on image counts ──────────
+    #  Each split's photoshopped pool is its own bottleneck candidate. For the
+    #  70/15/15 ratio to hold, cap[s] = total * ratio[s], so the largest total
+    #  we can support is min(pool[s] / ratio[s]) across splits.
+    ratios = {"train": config.TRAIN_RATIO,
+              "val":   config.VAL_RATIO,
+              "test":  config.TEST_RATIO}
+
+    pool_total_bound = min(len(ps_by_split[s]) / ratios[s] for s in SPLITS)
+
+    if args.max_per_class > 0:
+        # Interpret as TRAIN cap; scale val/test from ratios.
+        train_cap_req = args.max_per_class
+        total_from_arg = train_cap_req / ratios["train"]
+        total_cap = min(total_from_arg, pool_total_bound)
+    else:
+        total_cap = pool_total_bound
+
+    caps = {s: int(total_cap * ratios[s]) for s in SPLITS}
+    print(f"  Per-split caps (70/15/15): "
+          f"train={caps['train']}, val={caps['val']}, test={caps['test']}")
+
+    # ── 5. Balance classes per split ──────────────────────────────────────────
     print("\nBalancing classes per split …")
     for split in SPLITS:
-        n_ps = len(ps_by_split[split])
+        cap = caps[split]
 
         # Real: orig + supplement from rvf_real
         n_orig = len(orig_by_split[split])
-        supplement_needed = max(0, n_ps - n_orig)
+        supplement_needed = max(0, cap - n_orig)
         rvf_supplement = rvf_real_splits[split][:supplement_needed]
         real_paths = orig_by_split[split] + rvf_supplement
 
-        # AI-generated: cap to match photoshopped count
-        ai_paths = ai_splits[split][:n_ps]
-
-        # If max_per_class is set, further cap all three
-        if args.max_per_class > 0:
-            cap = args.max_per_class
-        else:
-            cap = n_ps  # bottleneck is photoshopped
+        # AI-generated: pulled from rvf_fake split pool
+        ai_paths = ai_splits[split]
 
         real_paths = real_paths[:cap]
         ps_paths   = ps_by_split[split][:cap]
@@ -262,7 +271,7 @@ def main() -> None:
         rng.shuffle(ps_paths)
         rng.shuffle(ai_paths)
 
-        # ── 5. Copy to processed/{split}/{class}/ ────────────────────────────
+        # ── 6. Copy to processed/{split}/{class}/ ────────────────────────────
         for cls in config.CLASSES:
             _clear_and_create(PROCESSED / split / cls)
 
@@ -272,7 +281,7 @@ def main() -> None:
 
         print(f"  {split:5s}  real={n_r:>5}  photoshopped={n_p:>5}  ai_generated={n_ai:>5}")
 
-    # ── 6. Clean up old flat structure if it exists ───────────────────────────
+    # ── 7. Clean up old flat structure if it exists ───────────────────────────
     for cls in config.CLASSES:
         old_flat = PROCESSED / cls
         if old_flat.exists() and old_flat.is_dir():
@@ -282,7 +291,7 @@ def main() -> None:
                 shutil.rmtree(old_flat)
                 print(f"  Removed old flat dir: {old_flat}")
 
-    # ── 7. Summary ────────────────────────────────────────────────────────────
+    # ── 8. Summary ────────────────────────────────────────────────────────────
     print(f"\nFinal counts (data/processed/):")
     grand_total = 0
     for split in SPLITS:
@@ -297,7 +306,7 @@ def main() -> None:
 
     print(
         "\nDone. Person-level split ensures no identity leakage.\n"
-        "Train persons get ALL edits; val/test persons get ONE random edit.\n"
+        "Image counts follow the 70/15/15 ratio across train/val/test.\n"
         "\nNext:  python train_cnn.py --model efficientnet\n"
         "  or:  python train_cnn.py --model resnet"
     )
